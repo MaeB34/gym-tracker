@@ -172,6 +172,30 @@
   .badge-pr{display:inline-block;background:rgba(232,255,71,.15);color:var(--accent);font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.12em;padding:2px 7px;border-radius:2px;vertical-align:middle;margin-left:6px;}
   .empty-state{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--muted);text-align:center;padding:32px;letter-spacing:.1em;}
 
+  /* CATALOGUE */
+  .cat-search-wrap{position:relative;margin-bottom:16px;}
+  .cat-search-wrap input{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'DM Mono',monospace;font-size:.85rem;padding:11px 14px 11px 38px;width:100%;outline:none;transition:border-color .15s;}
+  .cat-search-wrap input:focus{border-color:var(--accent);}
+  .cat-search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;font-size:.85rem;}
+  .cat-list{display:flex;flex-direction:column;gap:6px;}
+  .cat-row{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px 18px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px;}
+  .cat-row:hover{border-color:var(--accent);background:var(--surface2);}
+  .cat-row-body{flex:1;min-width:0;}
+  .cat-row-name{font-size:.9rem;font-weight:400;margin-bottom:4px;}
+  .cat-row-meta{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);letter-spacing:.05em;}
+  .cat-pr{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.04em;color:var(--accent);flex-shrink:0;line-height:1;}
+  .cat-sessions{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);text-align:right;white-space:nowrap;}
+  .cat-tag{display:inline-block;font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.1em;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:2px 7px;border-radius:2px;margin:2px 3px 0 0;}
+  .cat-filter-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+  .cat-filter-btn{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);padding:5px 10px;cursor:pointer;transition:all .15s;}
+  .cat-filter-btn:hover,.cat-filter-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(232,255,71,.06);}
+
+  /* DRAG-REORDER */
+  .draggable{cursor:grab;touch-action:none;}
+  .draggable:active{cursor:grabbing;}
+  .drag-ghost{opacity:.3;border:1px dashed var(--accent)!important;}
+  .drag-target{border-color:var(--accent)!important;background:rgba(232,255,71,.07)!important;}
+
   /* CHARTS */
   .charts-grid{display:flex;flex-direction:column;gap:12px;margin-bottom:20px;}
   .chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:16px 20px;height:320px;position:relative;}
@@ -208,6 +232,26 @@
   .add-row-btn{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);background:none;border:1px dashed var(--border);border-radius:3px;padding:10px 14px;cursor:pointer;width:100%;transition:all .15s;}
   .add-row-btn:hover{border-color:var(--accent);color:var(--accent);}
 
+  /* CATALOGUE */
+  .cat-search-wrap{position:relative;margin-bottom:20px;}
+  .cat-search-wrap input{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'DM Mono',monospace;font-size:.85rem;padding:12px 16px 12px 40px;width:100%;outline:none;transition:border-color .15s;}
+  .cat-search-wrap input:focus{border-color:var(--accent);}
+  .cat-search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.85rem;pointer-events:none;}
+  .cat-list{display:flex;flex-direction:column;gap:6px;}
+  .cat-row{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px 18px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .cat-row:hover{border-color:var(--accent);background:var(--surface2);}
+  .cat-row-body{flex:1;min-width:0;}
+  .cat-row-name{font-size:.9rem;font-weight:400;margin-bottom:3px;}
+  .cat-row-meta{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);letter-spacing:.06em;}
+  .cat-row-arrow{color:var(--muted);font-size:1rem;flex-shrink:0;}
+  .cat-pr-badge{display:inline-block;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--accent);letter-spacing:.05em;margin-right:8px;}
+  .cat-splits-tag{font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:2px 7px;border-radius:2px;white-space:nowrap;display:inline-block;margin-right:4px;margin-top:3px;}
+
+  /* DRAG REORDER */
+  .drag-item{transition:background .1s,border-color .1s;}
+  .drag-item.dragging{opacity:.35;}
+  .drag-item.drag-over{border-color:var(--accent)!important;background:rgba(232,255,71,.06)!important;}
+
   /* LOADING */
   .loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px;}
   .spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
@@ -241,6 +285,7 @@
   </div>
   <div class="header-right">
     <button class="icon-btn" onclick="showPRs()">🏅 PRs</button>
+    <button class="icon-btn" onclick="showCatalogue()">📚 Catalogue</button>
     <button class="icon-btn" id="achBtn" onclick="showAchievements()">🏆 <span id="achCount">0</span></button>
     <button class="icon-btn" id="syncBtn">
       <span class="sync-dot" id="syncDot"></span>
@@ -890,19 +935,85 @@ function setBig3(key, val){
   showPRs();
 }
 
+// ── DRAG-TO-REORDER ENGINE ────────────────────────────────────────
+// Generic: works for both splits list and exercise list inside a modal.
+// listEl = the container, getItems = ()=>array, setItems = (arr)=>save,
+// afterDrop = callback after successful reorder.
+function makeDraggable(listEl, getItems, setItems, afterDrop){
+  let dragIdx=null, overIdx=null;
+
+  function rows(){ return [...listEl.querySelectorAll('[data-drag-idx]')]; }
+
+  function clearHighlights(){
+    rows().forEach(r=>{ r.classList.remove('drag-ghost','drag-target'); });
+  }
+
+  function applyDrop(){
+    if(dragIdx===null||overIdx===null||dragIdx===overIdx){ clearHighlights(); dragIdx=overIdx=null; return; }
+    const arr=getItems();
+    const [moved]=arr.splice(dragIdx,1);
+    arr.splice(overIdx,0,moved);
+    setItems(arr);
+    clearHighlights();
+    dragIdx=overIdx=null;
+    afterDrop();
+  }
+
+  // ── MOUSE drag ──
+  listEl.addEventListener('mousedown', e=>{
+    const handle=e.target.closest('[data-handle]');
+    if(!handle) return;
+    const row=handle.closest('[data-drag-idx]');
+    if(!row) return;
+    dragIdx=+row.dataset.dragIdx;
+    row.classList.add('drag-ghost');
+    e.preventDefault();
+
+    function onMove(ev){
+      const els=document.elementsFromPoint(ev.clientX,ev.clientY);
+      const target=els.find(el=>el.dataset.dragIdx!=null&&el!==row);
+      if(target){
+        overIdx=+target.dataset.dragIdx;
+        rows().forEach(r=>r.classList.toggle('drag-target', +r.dataset.dragIdx===overIdx && +r.dataset.dragIdx!==dragIdx));
+      }
+    }
+    function onUp(){ applyDrop(); document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp); }
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('mouseup',onUp);
+  });
+
+  // ── TOUCH drag ──
+  listEl.addEventListener('touchstart', e=>{
+    const handle=e.target.closest('[data-handle]');
+    if(!handle) return;
+    const row=handle.closest('[data-drag-idx]');
+    if(!row) return;
+    dragIdx=+row.dataset.dragIdx;
+    row.classList.add('drag-ghost');
+    e.preventDefault();
+
+    function onMove(ev){
+      const t=ev.touches[0];
+      const els=document.elementsFromPoint(t.clientX,t.clientY);
+      const target=els.find(el=>el.dataset.dragIdx!=null&&el!==row);
+      if(target){
+        overIdx=+target.dataset.dragIdx;
+        rows().forEach(r=>r.classList.toggle('drag-target', +r.dataset.dragIdx===overIdx && +r.dataset.dragIdx!==dragIdx));
+      }
+    }
+    function onEnd(){ applyDrop(); listEl.removeEventListener('touchmove',onMove); listEl.removeEventListener('touchend',onEnd); }
+    listEl.addEventListener('touchmove',onMove,{passive:false});
+    listEl.addEventListener('touchend',onEnd);
+  },{passive:false});
+}
+
 // ── EDIT SPLITS MODAL ─────────────────────────────────────────────
 function openEditSplitsModal(){
   const overlay=document.createElement('div'); overlay.className='modal-overlay'; overlay.id='editSplitsModal';
-  const rows=D.splits.map((s,i)=>`
-    <div class="edit-split-row" id="splitRow_${i}">
-      <span class="edit-split-handle">⠿</span>
-      <input type="text" value="${escHtml(s.name)}" onchange="renameSplit(${i},this.value)" placeholder="Split name">
-      <button class="edit-split-del" onclick="deleteSplit(${i})" title="Delete split">✕</button>
-    </div>`).join('');
   overlay.innerHTML=`<div class="modal">
     <h3>Edit Splits</h3>
-    <p>Rename or remove workout days. Changes sync across devices.</p>
-    <div class="edit-split-list" id="splitList">${rows}</div>
+    <p>Drag ⠿ to reorder. Rename or remove workout days. Syncs across devices.</p>
+    <div class="edit-split-list" id="splitList"></div>
     <button class="add-row-btn" onclick="addSplit()">+ Add Day</button>
     <div class="modal-actions" style="margin-top:20px">
       <button class="btn-primary" onclick="closeModal('editSplitsModal');showSplits()">Done</button>
@@ -910,48 +1021,330 @@ function openEditSplitsModal(){
   </div>`;
   overlay.addEventListener('click',e=>{ if(e.target===overlay){ closeModal('editSplitsModal'); showSplits(); } });
   document.body.appendChild(overlay);
+  renderSplitEditRows();
 }
-function renameSplit(i,val){ D.splits[i].name=val; saveData(); }
+
+function renderSplitEditRows(){
+  const list=document.getElementById('splitList'); if(!list) return;
+  list.innerHTML=D.splits.map((s,i)=>`
+    <div class="edit-split-row" data-drag-idx="${i}" style="user-select:none">
+      <span class="edit-split-handle draggable" data-handle title="Drag to reorder" style="color:var(--muted);font-size:1rem;flex-shrink:0;cursor:grab;padding:2px 4px">⠿</span>
+      <input type="text" value="${escHtml(s.name)}" onchange="renameSplit(${i},this.value)" placeholder="Split name" style="flex:1;background:transparent;border:none;color:var(--text);font-family:'DM Mono',monospace;font-size:.85rem;outline:none;">
+      <button class="edit-split-del" onclick="deleteSplit(${i})" title="Delete" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;padding:2px 6px;flex-shrink:0;transition:color .15s;">✕</button>
+    </div>`).join('');
+  makeDraggable(list,
+    ()=>D.splits,
+    arr=>{ D.splits=arr; saveData(); },
+    ()=>renderSplitEditRows()
+  );
+}
+
+function renameSplit(i,val){ if(D.splits[i]) { D.splits[i].name=val; saveData(); } }
 function deleteSplit(i){
   if(!confirm(`Delete "${D.splits[i].name}" and all its exercises? This cannot be undone.`)) return;
   D.splits.splice(i,1); saveData(); closeModal('editSplitsModal'); showSplits();
 }
 function addSplit(){
   D.splits.push({name:'New Day',exercises:[]});
-  saveData(); closeModal('editSplitsModal'); openEditSplitsModal();
+  saveData(); renderSplitEditRows();
 }
 
 // ── EDIT EXERCISES MODAL ──────────────────────────────────────────
 function openEditExercisesModal(si){
   const split=D.splits[si];
   const overlay=document.createElement('div'); overlay.className='modal-overlay'; overlay.id='editExModal';
-  const rows=split.exercises.map((e,i)=>`
-    <div class="edit-ex-row">
-      <span class="edit-split-handle">⠿</span>
-      <input type="text" value="${escHtml(e.name)}" onchange="renameExercise(${si},${i},this.value)" placeholder="Exercise name">
-      <button class="edit-split-del" onclick="deleteExercise(${si},${i})" title="Delete">✕</button>
-    </div>`).join('');
   overlay.innerHTML=`<div class="modal">
     <h3>Edit: ${escHtml(split.name)}</h3>
-    <p>Add, rename, or remove exercises. History is preserved when renaming.</p>
-    <div class="edit-ex-list" id="exList_${si}">${rows||'<div class="empty-state" style="padding:16px">No exercises yet</div>'}</div>
-    <button class="add-row-btn" onclick="addExercise(${si})">+ Add Exercise</button>
+    <p>Drag ⠿ to reorder. Add from catalogue or type a new name. History is preserved.</p>
+    <div class="edit-ex-list" id="exList_${si}"></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="add-row-btn" style="flex:1" onclick="addExercise(${si})">+ New Exercise</button>
+      <button class="add-row-btn" style="flex:1;border-color:var(--accent);color:var(--accent)" onclick="openCataloguePickerModal(${si})">📚 From Catalogue</button>
+    </div>
     <div class="modal-actions" style="margin-top:20px">
       <button class="btn-primary" onclick="closeModal('editExModal');showExercises(${si})">Done</button>
     </div>
   </div>`;
   overlay.addEventListener('click',e=>{ if(e.target===overlay){ closeModal('editExModal'); showExercises(si); } });
   document.body.appendChild(overlay);
+  renderExerciseEditRows(si);
 }
-function renameExercise(si,ei,val){ D.splits[si].exercises[ei].name=val; saveData(); }
+
+function renderExerciseEditRows(si){
+  const list=document.getElementById(`exList_${si}`); if(!list) return;
+  const exs=D.splits[si].exercises;
+  if(!exs.length){ list.innerHTML=`<div class="empty-state" style="padding:16px">No exercises yet</div>`; return; }
+  list.innerHTML=exs.map((e,i)=>`
+    <div class="edit-ex-row" data-drag-idx="${i}" style="user-select:none;background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:10px 14px;display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <span class="draggable" data-handle title="Drag to reorder" style="color:var(--muted);font-size:1rem;flex-shrink:0;cursor:grab;padding:2px 4px">⠿</span>
+      <input type="text" value="${escHtml(e.name)}" onchange="renameExercise(${si},${i},this.value)" placeholder="Exercise name" style="flex:1;background:transparent;border:none;color:var(--text);font-family:'DM Mono',monospace;font-size:.82rem;outline:none;">
+      <span style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted)">${e.history.length} logs</span>
+      <button onclick="deleteExercise(${si},${i})" title="Delete" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;padding:2px 6px;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--accent2)'" onmouseout="this.style.color='var(--muted)'">✕</button>
+    </div>`).join('');
+  makeDraggable(list,
+    ()=>D.splits[si].exercises,
+    arr=>{ D.splits[si].exercises=arr; saveData(); },
+    ()=>renderExerciseEditRows(si)
+  );
+}
+
+function renameExercise(si,ei,val){ if(D.splits[si]?.exercises[ei]) { D.splits[si].exercises[ei].name=val; saveData(); } }
 function deleteExercise(si,ei){
   const ex=D.splits[si].exercises[ei];
-  if(ex.history.length&&!confirm(`Delete "${ex.name}"? This will remove ${ex.history.length} logged session(s).`)) return;
-  D.splits[si].exercises.splice(ei,1); saveData(); closeModal('editExModal'); openEditExercisesModal(si);
+  if(ex.history.length&&!confirm(`Delete "${ex.name}"? This removes ${ex.history.length} logged session(s).`)) return;
+  D.splits[si].exercises.splice(ei,1); saveData(); renderExerciseEditRows(si);
 }
 function addExercise(si){
   D.splits[si].exercises.push({name:'New Exercise',warmupWeight:0,warmupReps:10,workingWeight:0,notes:'',history:[],alternatives:[]});
-  saveData(); closeModal('editExModal'); openEditExercisesModal(si);
+  saveData(); renderExerciseEditRows(si);
+}
+
+// ── CATALOGUE ──────────────────────────────────────────────────────
+// Build a deduplicated index of every exercise ever logged across all splits.
+function buildCatalogue(){
+  const map=new Map(); // name → {name, history[], workingWeight, warmupWeight, warmupReps, notes, alternatives, splits[]}
+  D.splits.forEach((split,si)=>{
+    split.exercises.forEach((ex,ei)=>{
+      const key=ex.name.trim().toLowerCase();
+      if(!map.has(key)){
+        map.set(key,{
+          name:ex.name, history:[...ex.history],
+          workingWeight:ex.workingWeight, warmupWeight:ex.warmupWeight,
+          warmupReps:ex.warmupReps, notes:ex.notes, alternatives:ex.alternatives||[],
+          refs:[{si,ei,splitName:split.name}]
+        });
+      } else {
+        const entry=map.get(key);
+        // merge history (deduplicate by date+weight+reps)
+        ex.history.forEach(h=>{
+          const dup=entry.history.find(eh=>eh.date===h.date&&eh.set1.reps===h.set1.reps&&eh.set1.weight===h.set1.weight);
+          if(!dup) entry.history.push(h);
+        });
+        entry.refs.push({si,ei,splitName:split.name});
+        // use highest working weight
+        if(ex.workingWeight>entry.workingWeight) entry.workingWeight=ex.workingWeight;
+      }
+    });
+  });
+  // Sort history
+  map.forEach(e=>e.history.sort((a,b)=>a.date.localeCompare(b.date)));
+  return [...map.values()].sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+function showCatalogue(filter=''){
+  setNav({view:'catalogue'}); destroyCharts();
+  const all=buildCatalogue();
+  const withHistory=all.filter(e=>e.history.length>0);
+  const noHistory=all.filter(e=>e.history.length===0);
+
+  const renderList=(items,q)=>{
+    const filtered=q?items.filter(e=>e.name.toLowerCase().includes(q)):items;
+    if(!filtered.length) return `<div class="empty-state">No exercises match</div>`;
+    return filtered.map(e=>{
+      const best=e.history.length?Math.max(...e.history.map(h=>Math.max(h.set1.weight,h.set2.weight))):null;
+      const splitTags=e.refs.map(r=>`<span class="cat-tag">${escHtml(r.splitName)}</span>`).join('');
+      return `<div class="cat-row animate" onclick="showCatalogueDetail('${escHtml(e.name)}')">
+        <div class="cat-row-body">
+          <div class="cat-row-name">${escHtml(e.name)}</div>
+          <div class="cat-row-meta">${splitTags}</div>
+        </div>
+        ${best!==null?`<div style="text-align:right;flex-shrink:0"><div class="cat-pr">${best}<span style="font-size:.9rem">kg</span></div><div style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted)">${e.history.length} sessions</div></div>`:'<div style="font-family:\'DM Mono\',monospace;font-size:.6rem;color:var(--muted)">no logs</div>'}
+        <span style="color:var(--muted)">›</span>
+      </div>`;
+    }).join('');
+  };
+
+  document.getElementById('app').innerHTML=`
+    <button class="back-btn animate" onclick="showSplits()">${backIcon()} Home</button>
+    <div class="section-header animate"><h2>Exercise Catalogue</h2></div>
+    <div class="cat-search-wrap animate">
+      <span class="cat-search-icon">🔍</span>
+      <input type="text" id="catSearch" placeholder="Search exercises…" oninput="catFilter(this.value)" autocomplete="off">
+    </div>
+    <div id="catResults">
+      ${withHistory.length?`<div class="pr-section-title" style="margin-bottom:10px">Logged Exercises (${withHistory.length})</div><div class="cat-list" id="catLogged">${renderList(withHistory,'')}</div>`:''}
+      ${noHistory.length?`<div class="pr-section-title" style="margin:20px 0 10px">Not Yet Logged (${noHistory.length})</div><div class="cat-list" id="catUnlogged">${renderList(noHistory,'')}</div>`:''}
+      ${!all.length?`<div class="empty-state">No exercises found. Add exercises to your splits to build up the catalogue.</div>`:''}
+    </div>`;
+  setTimeout(()=>document.getElementById('catSearch')?.focus(),100);
+}
+
+function catFilter(q){
+  const all=buildCatalogue();
+  const trimmed=q.toLowerCase().trim();
+  const filtered=trimmed?all.filter(e=>e.name.toLowerCase().includes(trimmed)):all;
+  const withH=filtered.filter(e=>e.history.length>0);
+  const noH=filtered.filter(e=>e.history.length===0);
+
+  const renderList=(items)=>items.map(e=>{
+    const best=e.history.length?Math.max(...e.history.map(h=>Math.max(h.set1.weight,h.set2.weight))):null;
+    const splitTags=e.refs.map(r=>`<span class="cat-tag">${escHtml(r.splitName)}</span>`).join('');
+    return `<div class="cat-row" onclick="showCatalogueDetail('${escHtml(e.name)}')">
+      <div class="cat-row-body">
+        <div class="cat-row-name">${escHtml(e.name)}</div>
+        <div class="cat-row-meta">${splitTags}</div>
+      </div>
+      ${best!==null?`<div style="text-align:right;flex-shrink:0"><div class="cat-pr">${best}<span style="font-size:.9rem">kg</span></div><div style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted)">${e.history.length} sessions</div></div>`:'<div style="font-family:\'DM Mono\',monospace;font-size:.6rem;color:var(--muted)">no logs</div>'}
+      <span style="color:var(--muted)">›</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('catResults').innerHTML=`
+    ${withH.length?`<div class="pr-section-title" style="margin-bottom:10px">Logged Exercises (${withH.length})</div><div class="cat-list">${renderList(withH)}</div>`:''}
+    ${noH.length?`<div class="pr-section-title" style="margin:20px 0 10px">Not Yet Logged (${noH.length})</div><div class="cat-list">${renderList(noH)}</div>`:''}
+    ${!filtered.length?`<div class="empty-state">No exercises match "${escHtml(q)}"</div>`:''}`;
+}
+window.catFilter=catFilter;
+
+function showCatalogueDetail(name){
+  const all=buildCatalogue();
+  const entry=all.find(e=>e.name===name);
+  if(!entry) return;
+  setNav({view:'catalogueDetail',name}); destroyCharts();
+
+  const best=entry.history.length?Math.max(...entry.history.map(h=>Math.max(h.set1.weight,h.set2.weight))):null;
+  const totalVol=entry.history.reduce((t,h)=>t+(h.set1.weight*h.set1.reps)+(h.set2.weight*h.set2.reps),0);
+  const splitTags=entry.refs.map(r=>`<span class="cat-tag" style="font-size:.65rem;padding:3px 10px">${escHtml(r.splitName)}</span>`).join('');
+
+  // Render history table (newest first)
+  const histSorted=[...entry.history].sort((a,b)=>b.date.localeCompare(a.date));
+  let histHtml='';
+  if(histSorted.length){
+    histHtml=`<table class="history-table"><thead><tr><th>Date</th><th>Set 1</th><th>Set 2</th><th>Volume</th></tr></thead><tbody>`;
+    histSorted.forEach(h=>{
+      const vol=(h.set1.weight*h.set1.reps)+(h.set2.weight*h.set2.reps);
+      histHtml+=`<tr>
+        <td>${h.date}${h.progressed?`<span class="badge-pr">↑ PR</span>`:''}</td>
+        <td>${h.set1.weight}kg × ${h.set1.reps}</td>
+        <td>${h.set2.weight}kg × ${h.set2.reps}</td>
+        <td class="${h.progressed?'fire':''}">${vol}kg</td>
+      </tr>`;
+    });
+    histHtml+=`</tbody></table>`;
+  } else {
+    histHtml=`<div class="empty-state">No sessions logged yet</div>`;
+  }
+
+  document.getElementById('app').innerHTML=`
+    <button class="back-btn animate" onclick="showCatalogue()">${backIcon()} Catalogue</button>
+    <div class="detail-header animate">
+      <div class="detail-title">${escHtml(entry.name)}</div>
+      <div class="detail-subtitle">${splitTags}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:20px" class="animate animate-delay-1">
+      <div class="ach-stat"><div class="ach-stat-num" style="color:var(--accent)">${best!==null?best+'kg':'—'}</div><div class="ach-stat-label">Best Weight</div></div>
+      <div class="ach-stat"><div class="ach-stat-num" style="color:var(--accent)">${entry.history.length}</div><div class="ach-stat-label">Sessions</div></div>
+      <div class="ach-stat"><div class="ach-stat-num" style="color:var(--accent)">${totalVol?Math.round(totalVol/1000)+'t':'—'}</div><div class="ach-stat-label">Total Vol</div></div>
+      <div class="ach-stat"><div class="ach-stat-num" style="font-size:1.3rem;color:var(--accent)">${entry.workingWeight?entry.workingWeight+'kg':'—'}</div><div class="ach-stat-label">Working Wt</div></div>
+    </div>
+
+    ${entry.history.length>=2?`
+    <div class="charts-grid animate animate-delay-1">
+      <div class="chart-wrap"><div class="chart-title">Weight Progression</div><canvas id="catChart"></canvas></div>
+    </div>`:``}
+
+    ${entry.notes?`<div class="card animate animate-delay-2" style="padding:16px 20px;margin-bottom:16px">
+      <span class="card-label">Notes</span>
+      <div class="notes-display">${escHtml(entry.notes)}</div>
+    </div>`:''}
+
+    <div class="card animate animate-delay-2">
+      <span class="card-label">Full History</span>
+      ${histHtml}
+    </div>`;
+
+  // Render chart if enough data
+  if(entry.history.length>=2){
+    const sorted=[...entry.history].sort((a,b)=>a.date.localeCompare(b.date));
+    const labels=sorted.map(h=>h.date);
+    const weights=sorted.map(h=>Math.max(h.set1.weight,h.set2.weight));
+    const ctx=document.getElementById('catChart');
+    if(ctx) charts.catChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{
+      label:'Best Weight (kg)',data:weights,borderColor:'#e8ff47',backgroundColor:'rgba(232,255,71,.07)',
+      pointBackgroundColor:'#e8ff47',pointRadius:4,borderWidth:2,tension:.35,fill:true
+    }]},options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c1c22',borderColor:'#2a2a32',borderWidth:1,titleColor:'#6b6b7a',bodyColor:'#f0f0f5',padding:10}},
+      scales:{x:{grid:{color:'#1e1e24'},ticks:{maxTicksLimit:8,font:{size:9}}},
+              y:{grid:{color:'#1e1e24'},ticks:{font:{size:9},callback:v=>v+'kg'}}}}});
+  }
+}
+
+// ── CATALOGUE PICKER (when adding from "From Catalogue" in edit exercises) ──
+function openCataloguePickerModal(si){
+  const all=buildCatalogue();
+  // Only show exercises not already in this split
+  const splitNames=new Set(D.splits[si].exercises.map(e=>e.name.toLowerCase()));
+  const available=all.filter(e=>!splitNames.has(e.name.toLowerCase()));
+
+  const overlay=document.createElement('div'); overlay.className='modal-overlay'; overlay.id='catPickerModal';
+  const renderItems=(items)=>items.map(e=>{
+    const best=e.history.length?Math.max(...e.history.map(h=>Math.max(h.set1.weight,h.set2.weight))):null;
+    return `<div class="cat-row" onclick="addFromCatalogue(${si},'${escHtml(e.name)}')" style="padding:10px 14px">
+      <div class="cat-row-body">
+        <div class="cat-row-name" style="font-size:.85rem">${escHtml(e.name)}</div>
+        <div class="cat-row-meta">${e.history.length} sessions${best?` · best ${best}kg`:''}</div>
+      </div>
+      <span style="color:var(--accent);font-size:.75rem;font-family:'DM Mono',monospace;flex-shrink:0">+ Add</span>
+    </div>`;
+  }).join('');
+
+  overlay.innerHTML=`<div class="modal">
+    <h3>Add from Catalogue</h3>
+    <p>Pick an exercise to copy into this split, including its weights, notes and history.</p>
+    <div class="cat-search-wrap" style="margin-bottom:12px">
+      <span class="cat-search-icon">🔍</span>
+      <input type="text" id="pickerSearch" placeholder="Search…" autocomplete="off"
+        oninput="pickerFilter(${si},this.value)" style="background:var(--bg)">
+    </div>
+    <div class="cat-list" id="pickerList" style="max-height:380px;overflow-y:auto">
+      ${available.length?renderItems(available):`<div class="empty-state">All catalogue exercises are already in this split.</div>`}
+    </div>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn-secondary" onclick="closeModal('catPickerModal')">Cancel</button>
+    </div>
+  </div>`;
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) closeModal('catPickerModal'); });
+  document.body.appendChild(overlay);
+  setTimeout(()=>document.getElementById('pickerSearch')?.focus(),80);
+  window._pickerAvailable=available;
+}
+
+function pickerFilter(si,q){
+  const available=window._pickerAvailable||[];
+  const filtered=q?available.filter(e=>e.name.toLowerCase().includes(q.toLowerCase())):available;
+  const list=document.getElementById('pickerList'); if(!list) return;
+  list.innerHTML=filtered.map(e=>{
+    const best=e.history.length?Math.max(...e.history.map(h=>Math.max(h.set1.weight,h.set2.weight))):null;
+    return `<div class="cat-row" onclick="addFromCatalogue(${si},'${escHtml(e.name)}')" style="padding:10px 14px">
+      <div class="cat-row-body">
+        <div class="cat-row-name" style="font-size:.85rem">${escHtml(e.name)}</div>
+        <div class="cat-row-meta">${e.history.length} sessions${best?` · best ${best}kg`:''}</div>
+      </div>
+      <span style="color:var(--accent);font-size:.75rem;font-family:'DM Mono',monospace;flex-shrink:0">+ Add</span>
+    </div>`;
+  }).join('') || `<div class="empty-state">No matches</div>`;
+}
+window.pickerFilter=pickerFilter;
+
+function addFromCatalogue(si, name){
+  const all=buildCatalogue();
+  const entry=all.find(e=>e.name===name);
+  if(!entry){ showToast('Exercise not found in catalogue.'); return; }
+  // Deep copy including history so it lives independently in this split
+  D.splits[si].exercises.push({
+    name: entry.name,
+    warmupWeight: entry.warmupWeight,
+    warmupReps: entry.warmupReps,
+    workingWeight: entry.workingWeight,
+    notes: entry.notes||'',
+    history: JSON.parse(JSON.stringify(entry.history)),
+    alternatives: [...(entry.alternatives||[])]
+  });
+  saveData();
+  closeModal('catPickerModal');
+  renderExerciseEditRows(si);
+  showToast(`${entry.name} added ✓`);
 }
 
 // ── ACHIEVEMENTS PAGE ─────────────────────────────────────────────
@@ -981,11 +1374,13 @@ function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&l
 // ═══ EXPOSE GLOBALS ══════════════════════════════════════════════════
 Object.assign(window,{
   showSplits, showExercises, showExerciseDetail, showAchievements, showPRs,
+  showCatalogue, showCatalogueDetail, catFilter,
   submitWorkout, deleteLog, openEditLog, saveEditLog, editWarmup,
   openAltsModal, applySwap, revertSwap, closeModal,
   openNotesModal, saveNotes,
-  openEditSplitsModal, renameSplit, deleteSplit, addSplit,
-  openEditExercisesModal, renameExercise, deleteExercise, addExercise,
+  openEditSplitsModal, renameSplit, deleteSplit, addSplit, renderSplitEditRows,
+  openEditExercisesModal, renameExercise, deleteExercise, addExercise, renderExerciseEditRows,
+  openCataloguePickerModal, addFromCatalogue, pickerFilter,
   setBig3,
 });
 
@@ -999,6 +1394,8 @@ else if(_nav.view==='split')        showExercises(_nav.si);
 else if(_nav.view==='exercise')     showExerciseDetail(_nav.si,_nav.ei);
 else if(_nav.view==='achievements') showAchievements();
 else if(_nav.view==='prs')          showPRs();
+else if(_nav.view==='catalogue')    showCatalogue();
+else if(_nav.view==='catalogueDetail') showCatalogueDetail(_nav.name);
 else showSplits();
 
 </script>
