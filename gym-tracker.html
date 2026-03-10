@@ -320,7 +320,7 @@ const fbApp = initializeApp({
   appId:             "1:611291366199:web:245cbd017f291df7ba90b2"
 });
 const db       = getFirestore(fbApp);
-const DATA_DOC = doc(db, "users", "maeb34");
+const DATA_DOC = doc(db, "gymdata", "maeb34");
 
 // ═══ NAV ════════════════════════════════════════════════════════════
 const NAV_KEY = 'gymTrackerNav';
@@ -403,15 +403,25 @@ const DEFAULT_DATA = {
 };
 
 // ═══ DATA LAYER ══════════════════════════════════════════════════════
-let D = null; // live data object
+let D = null;
 let saveTimer = null;
-let ignoreSnapshot = false;
+let isSaving = false;          // true while a setDoc is in-flight
+let pendingSave = false;       // queued save requested while one was in-flight
+
+const CACHE_KEY = 'gymTrackerCache';
 
 function setSyncStatus(s){
   const dot=document.getElementById('syncDot'), lbl=document.getElementById('syncLabel');
   if(!dot||!lbl) return;
   dot.className='sync-dot '+s;
   lbl.textContent=s==='synced'?'Synced':s==='syncing'?'Saving…':'Offline';
+}
+
+function saveCache(data){
+  try{ localStorage.setItem(CACHE_KEY, JSON.stringify(data)); }catch(e){}
+}
+function loadCache(){
+  try{ const r=localStorage.getItem(CACHE_KEY); return r?JSON.parse(r):null; }catch(e){ return null; }
 }
 
 function ensureFields(d){
@@ -422,49 +432,103 @@ function ensureFields(d){
     if(!e.alternatives) e.alternatives=DEFAULT_DATA.splits[si]?.exercises[ei]?.alternatives||[];
     if(!e.history) e.history=[];
     if(e.notes==null) e.notes='';
-    // sort history oldest→newest
     e.history.sort((a,b)=>a.date.localeCompare(b.date));
   }));
 }
 
+// Returns true if user is actively filling in a log form
+function userIsMidSession(){
+  const nav=getNav();
+  if(nav.view!=='exercise') return false;
+  // Check if any reps field has been touched
+  const s1r=document.getElementById('s1r');
+  const s2r=document.getElementById('s2r');
+  return (s1r&&s1r.value.trim()!=='')||(s2r&&s2r.value.trim()!=='');
+}
+
 async function initData(){
+  // ── Step 1: show cached data instantly so the app is usable right away ──
+  const cached = loadCache();
+  if(cached){
+    D = cached;
+    ensureFields(D);
+    setSyncStatus('synced');
+    // Render immediately from cache
+    updateAchCount();
+    const nav=getNav();
+    if(nav.view==='splits')            showSplits();
+    else if(nav.view==='split')        showExercises(nav.si);
+    else if(nav.view==='exercise')     showExerciseDetail(nav.si,nav.ei);
+    else if(nav.view==='achievements') showAchievements();
+    else if(nav.view==='prs')          showPRs();
+    else if(nav.view==='catalogue')    showCatalogue();
+    else showSplits();
+  }
+
+  // ── Step 2: fetch latest from Firebase in background ──
   try {
     const snap = await getDoc(DATA_DOC);
     if(snap.exists()){
       D = snap.data();
       ensureFields(D);
+      saveCache(D);
     } else {
-      D = JSON.parse(JSON.stringify(DEFAULT_DATA));
-      await setDoc(DATA_DOC, D);
+      // First ever load — no Firebase doc yet
+      if(!cached){
+        D = JSON.parse(JSON.stringify(DEFAULT_DATA));
+        await setDoc(DATA_DOC, D);
+        saveCache(D);
+      }
     }
     setSyncStatus('synced');
+    updateAchCount();
+    // Only re-render if user isn't mid-session (don't disrupt an open form)
+    if(!userIsMidSession()){
+      const nav=getNav();
+      if(nav.view==='splits')            showSplits();
+      else if(nav.view==='split')        showExercises(nav.si);
+      else if(nav.view==='exercise')     showExerciseDetail(nav.si,nav.ei);
+      else if(nav.view==='achievements') showAchievements();
+      else if(nav.view==='prs')          showPRs();
+      else if(nav.view==='catalogue')    showCatalogue();
+    }
   } catch(e){
-    D = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    if(!cached){
+      D = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    }
     setSyncStatus('offline');
   }
 
-  // Live listener — auto-pull changes from other devices
+  // ── Step 3: live listener for cross-device sync ──
+  // Only updates D and re-renders safe views; never interrupts an open form
   onSnapshot(DATA_DOC, snap => {
-    if(ignoreSnapshot) return;
+    if(isSaving) return;   // our own save is echoing back — ignore
     if(!snap.exists()) return;
     const incoming = snap.data();
     ensureFields(incoming);
     D = incoming;
+    saveCache(D);
     updateAchCount();
-    // Re-render current view silently (only if on splits/PRs/achievements page to avoid disrupting mid-form)
-    const nav = getNav();
-    if(nav.view==='splits') showSplits();
+    setSyncStatus('synced');
+    const nav=getNav();
+    // Safe views: re-render silently. Active form views: don't touch.
+    if(nav.view==='splits')            showSplits();
     else if(nav.view==='achievements') showAchievements();
-    else if(nav.view==='prs') showPRs();
+    else if(nav.view==='prs')          showPRs();
+    else if(nav.view==='catalogue')    showCatalogue();
+    else if(nav.view==='split')        showExercises(nav.si);
+    // 'exercise' view deliberately excluded — never overwrite an open form
   });
 }
 
 function saveData(){
   if(!D) return;
   setSyncStatus('syncing');
-  ignoreSnapshot = true;
   clearTimeout(saveTimer);
+  saveCache(D); // always persist locally immediately
   saveTimer = setTimeout(async ()=>{
+    if(isSaving){ pendingSave=true; return; }
+    isSaving=true;
     try {
       await setDoc(DATA_DOC, D);
       setSyncStatus('synced');
@@ -472,8 +536,9 @@ function saveData(){
       setSyncStatus('offline');
       showToast('Save failed — check connection.');
     }
-    setTimeout(()=>{ ignoreSnapshot=false; }, 1500);
-  }, 500);
+    isSaving=false;
+    if(pendingSave){ pendingSave=false; saveData(); }
+  }, 400);
 }
 
 // ═══ ACHIEVEMENTS ENGINE ═════════════════════════════════════════════
@@ -1322,18 +1387,16 @@ Object.assign(window,{
 });
 
 // ═══ INIT ════════════════════════════════════════════════════════════
-document.getElementById('app').innerHTML=`<div class="loading-screen"><div class="spinner"></div><p>Loading your data…</p></div>`;
+// Show loading screen only if no cache exists (first ever load)
+if(!localStorage.getItem('gymTrackerCache')){
+  document.getElementById('app').innerHTML=`<div class="loading-screen"><div class="spinner"></div><p>Loading your data…</p></div>`;
+}
 await initData();
 updateAchCount();
-const _nav=getNav();
-if(_nav.view==='splits')            showSplits();
-else if(_nav.view==='split')        showExercises(_nav.si);
-else if(_nav.view==='exercise')     showExerciseDetail(_nav.si,_nav.ei);
-else if(_nav.view==='achievements') showAchievements();
-else if(_nav.view==='prs')          showPRs();
-else if(_nav.view==='catalogue')    showCatalogue();
-else if(_nav.view==='catalogueDetail') showCatalogueDetail(_nav.name);
-else showSplits();
+// If we had no cache, initData will have rendered the correct view already.
+// If we did have cache, it already rendered from cache above.
+// Either way, only route here if initData didn't render (no cache, first load fallback):
+if(!D){ showSplits(); }
 
 </script>
 </body>
