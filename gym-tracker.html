@@ -306,21 +306,92 @@
   <button class="prog-popup-close" onclick="closeProgPopup()">Got it</button>
 </div>
 
-<script type="module">
-import { initializeApp }   from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+<script>
+// ═══ FIRESTORE REST API (no SDK — loads instantly) ════════════════════
+const FS_PROJECT = 'gym-tracker-2e213';
+const FS_KEY     = 'AIzaSyAzWaGqMZ0Y7cZijbckSHTiW4knuavqKo0';
+const FS_DOC     = `gymdata/maeb34`;
+const FS_BASE    = `https://firestore.googleapis.com/v1/projects/${FS_PROJECT}/databases/(default)/documents/${FS_DOC}`;
 
-// ═══ FIREBASE ════════════════════════════════════════════════════════
-const fbApp = initializeApp({
-  apiKey:            "AIzaSyAzWaGqMZ0Y7cZijbckSHTiW4knuavqKo0",
-  authDomain:        "gym-tracker-2e213.firebaseapp.com",
-  projectId:         "gym-tracker-2e213",
-  storageBucket:     "gym-tracker-2e213.firebasestorage.app",
-  messagingSenderId: "611291366199",
-  appId:             "1:611291366199:web:245cbd017f291df7ba90b2"
-});
-const db       = getFirestore(fbApp);
-const DATA_DOC = doc(db, "gymdata", "maeb34");
+// Convert our plain JS object → Firestore REST "fields" format
+function toFS(val){
+  if(val===null||val===undefined) return {nullValue:null};
+  if(typeof val==='boolean')      return {booleanValue:val};
+  if(typeof val==='number')       return Number.isInteger(val)?{integerValue:String(val)}:{doubleValue:val};
+  if(typeof val==='string')       return {stringValue:val};
+  if(Array.isArray(val))          return {arrayValue:{values:val.map(toFS)}};
+  if(typeof val==='object')       return {mapValue:{fields:Object.fromEntries(Object.entries(val).map(([k,v])=>[k,toFS(v)]))}};
+  return {stringValue:String(val)};
+}
+
+// Convert Firestore REST response → plain JS object
+function fromFS(fv){
+  if(!fv) return null;
+  if('nullValue'    in fv) return null;
+  if('booleanValue' in fv) return fv.booleanValue;
+  if('integerValue' in fv) return Number(fv.integerValue);
+  if('doubleValue'  in fv) return fv.doubleValue;
+  if('stringValue'  in fv) return fv.stringValue;
+  if('arrayValue'   in fv) return (fv.arrayValue.values||[]).map(fromFS);
+  if('mapValue'     in fv) return Object.fromEntries(Object.entries(fv.mapValue.fields||{}).map(([k,v])=>[k,fromFS(v)]));
+  return null;
+}
+
+async function fsGet(){
+  const r = await fetch(`${FS_BASE}?key=${FS_KEY}`,{cache:'no-store'});
+  if(r.status===404) return null;
+  if(!r.ok) throw new Error(`Firestore GET ${r.status}`);
+  const doc = await r.json();
+  return fromFS({mapValue:{fields:doc.fields||{}}});
+}
+
+async function fsSet(data){
+  // PATCH with updateMask clears old fields and writes new ones atomically
+  const fields = toFS(data).mapValue.fields;
+  const fieldPaths = Object.keys(fields).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&');
+  const r = await fetch(`${FS_BASE}?key=${FS_KEY}&${fieldPaths}`,{
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({fields})
+  });
+  if(!r.ok) throw new Error(`Firestore PATCH ${r.status}`);
+}
+
+// Long-poll for cross-device sync (Firestore REST doesn't do WebSocket,
+// so we poll every 15s — lightweight and reliable)
+let pollTimer = null;
+let lastKnownUpdate = null;
+function startPolling(){
+  clearInterval(pollTimer);
+  pollTimer = setInterval(async ()=>{
+    if(isSaving) return;
+    try{
+      const r = await fetch(`${FS_BASE}?key=${FS_KEY}&fields=updateTime`,{cache:'no-store'});
+      if(!r.ok) return;
+      const meta = await r.json();
+      const upd = meta.updateTime||'';
+      if(lastKnownUpdate && upd !== lastKnownUpdate){
+        // Something changed on another device — pull full doc
+        const incoming = await fsGet();
+        if(incoming){
+          ensureFields(incoming);
+          D = incoming;
+          saveCache(D);
+          updateAchCount();
+          setSyncStatus('synced');
+          const nav=getNav();
+          if(nav.view==='splits')            showSplits();
+          else if(nav.view==='achievements') showAchievements();
+          else if(nav.view==='prs')          showPRs();
+          else if(nav.view==='catalogue')    showCatalogue();
+          else if(nav.view==='split')        showExercises(nav.si);
+          // exercise view excluded — never overwrite open form
+        }
+      }
+      lastKnownUpdate = upd;
+    }catch(e){}
+  }, 15000);
+}
 
 // ═══ NAV ════════════════════════════════════════════════════════════
 const NAV_KEY = 'gymTrackerNav';
@@ -405,7 +476,7 @@ const DEFAULT_DATA = {
 // ═══ DATA LAYER ══════════════════════════════════════════════════════
 let D = null;
 let saveTimer = null;
-let isSaving = false;          // true while a setDoc is in-flight
+let isSaving = false;          // true while a REST write is in-flight
 let pendingSave = false;       // queued save requested while one was in-flight
 
 const CACHE_KEY = 'gymTrackerCache';
@@ -447,90 +518,65 @@ function userIsMidSession(){
 }
 
 async function initData(){
-  // ── Step 1: show cached data instantly so the app is usable right away ──
+  // ── Step 1: render from cache instantly ──
   const cached = loadCache();
   if(cached){
     D = cached;
     ensureFields(D);
     setSyncStatus('synced');
-    // Render immediately from cache
     updateAchCount();
-    const nav=getNav();
-    if(nav.view==='splits')            showSplits();
-    else if(nav.view==='split')        showExercises(nav.si);
-    else if(nav.view==='exercise')     showExerciseDetail(nav.si,nav.ei);
-    else if(nav.view==='achievements') showAchievements();
-    else if(nav.view==='prs')          showPRs();
-    else if(nav.view==='catalogue')    showCatalogue();
-    else showSplits();
+    renderNav();
   }
 
-  // ── Step 2: fetch latest from Firebase in background ──
+  // ── Step 2: fetch latest from Firestore REST in background ──
   try {
-    const snap = await getDoc(DATA_DOC);
-    if(snap.exists()){
-      D = snap.data();
+    const remote = await fsGet();
+    if(remote){
+      D = remote;
       ensureFields(D);
       saveCache(D);
-    } else {
-      // First ever load — no Firebase doc yet
-      if(!cached){
-        D = JSON.parse(JSON.stringify(DEFAULT_DATA));
-        await setDoc(DATA_DOC, D);
-        saveCache(D);
-      }
+      lastKnownUpdate = Date.now(); // seed poll baseline
+    } else if(!cached){
+      // No doc yet — first ever use
+      D = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      await fsSet(D);
+      saveCache(D);
     }
     setSyncStatus('synced');
     updateAchCount();
-    // Only re-render if user isn't mid-session (don't disrupt an open form)
-    if(!userIsMidSession()){
-      const nav=getNav();
-      if(nav.view==='splits')            showSplits();
-      else if(nav.view==='split')        showExercises(nav.si);
-      else if(nav.view==='exercise')     showExerciseDetail(nav.si,nav.ei);
-      else if(nav.view==='achievements') showAchievements();
-      else if(nav.view==='prs')          showPRs();
-      else if(nav.view==='catalogue')    showCatalogue();
-    }
+    if(!userIsMidSession()) renderNav();
   } catch(e){
-    if(!cached){
-      D = JSON.parse(JSON.stringify(DEFAULT_DATA));
-    }
+    if(!cached) D = JSON.parse(JSON.stringify(DEFAULT_DATA));
     setSyncStatus('offline');
   }
 
-  // ── Step 3: live listener for cross-device sync ──
-  // Only updates D and re-renders safe views; never interrupts an open form
-  onSnapshot(DATA_DOC, snap => {
-    if(isSaving) return;   // our own save is echoing back — ignore
-    if(!snap.exists()) return;
-    const incoming = snap.data();
-    ensureFields(incoming);
-    D = incoming;
-    saveCache(D);
-    updateAchCount();
-    setSyncStatus('synced');
-    const nav=getNav();
-    // Safe views: re-render silently. Active form views: don't touch.
-    if(nav.view==='splits')            showSplits();
-    else if(nav.view==='achievements') showAchievements();
-    else if(nav.view==='prs')          showPRs();
-    else if(nav.view==='catalogue')    showCatalogue();
-    else if(nav.view==='split')        showExercises(nav.si);
-    // 'exercise' view deliberately excluded — never overwrite an open form
-  });
+  // ── Step 3: start 15s poll for cross-device changes ──
+  startPolling();
+}
+
+function renderNav(){
+  const nav=getNav();
+  if(nav.view==='splits')            showSplits();
+  else if(nav.view==='split')        showExercises(nav.si);
+  else if(nav.view==='exercise')     showExerciseDetail(nav.si,nav.ei);
+  else if(nav.view==='achievements') showAchievements();
+  else if(nav.view==='prs')          showPRs();
+  else if(nav.view==='catalogue')    showCatalogue();
+  else if(nav.view==='catalogueDetail') showCatalogueDetail(nav.name);
+  else showSplits();
 }
 
 function saveData(){
   if(!D) return;
   setSyncStatus('syncing');
   clearTimeout(saveTimer);
-  saveCache(D); // always persist locally immediately
+  saveCache(D); // persist locally immediately — instant
   saveTimer = setTimeout(async ()=>{
     if(isSaving){ pendingSave=true; return; }
     isSaving=true;
     try {
-      await setDoc(DATA_DOC, D);
+      await fsSet(D);
+      lastKnownUpdate = Date.now();
       setSyncStatus('synced');
     } catch(e){
       setSyncStatus('offline');
@@ -1387,16 +1433,12 @@ Object.assign(window,{
 });
 
 // ═══ INIT ════════════════════════════════════════════════════════════
-// Show loading screen only if no cache exists (first ever load)
+// Show loading only if no cache (first ever open)
 if(!localStorage.getItem('gymTrackerCache')){
   document.getElementById('app').innerHTML=`<div class="loading-screen"><div class="spinner"></div><p>Loading your data…</p></div>`;
 }
-await initData();
+initData();
 updateAchCount();
-// If we had no cache, initData will have rendered the correct view already.
-// If we did have cache, it already rendered from cache above.
-// Either way, only route here if initData didn't render (no cache, first load fallback):
-if(!D){ showSplits(); }
 
 </script>
 </body>
