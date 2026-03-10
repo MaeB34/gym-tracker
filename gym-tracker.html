@@ -190,12 +190,6 @@
   .cat-filter-btn{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);padding:5px 10px;cursor:pointer;transition:all .15s;}
   .cat-filter-btn:hover,.cat-filter-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(232,255,71,.06);}
 
-  /* DRAG-REORDER */
-  .draggable{cursor:grab;touch-action:none;}
-  .draggable:active{cursor:grabbing;}
-  .drag-ghost{opacity:.3;border:1px dashed var(--accent)!important;}
-  .drag-target{border-color:var(--accent)!important;background:rgba(232,255,71,.07)!important;}
-
   /* CHARTS */
   .charts-grid{display:flex;flex-direction:column;gap:12px;margin-bottom:20px;}
   .chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:16px 20px;height:320px;position:relative;}
@@ -935,76 +929,21 @@ function setBig3(key, val){
   showPRs();
 }
 
-// ── DRAG-TO-REORDER ENGINE ────────────────────────────────────────
-// Generic: works for both splits list and exercise list inside a modal.
-// listEl = the container, getItems = ()=>array, setItems = (arr)=>save,
-// afterDrop = callback after successful reorder.
-function makeDraggable(listEl, getItems, setItems, afterDrop){
-  let dragIdx=null, overIdx=null;
+// ── REORDER HELPERS ───────────────────────────────────────────────
+function moveItem(arr, fromIdx, toIdx){
+  if(toIdx<0||toIdx>=arr.length) return arr;
+  const [item]=arr.splice(fromIdx,1);
+  arr.splice(toIdx,0,item);
+  return arr;
+}
 
-  function rows(){ return [...listEl.querySelectorAll('[data-drag-idx]')]; }
-
-  function clearHighlights(){
-    rows().forEach(r=>{ r.classList.remove('drag-ghost','drag-target'); });
-  }
-
-  function applyDrop(){
-    if(dragIdx===null||overIdx===null||dragIdx===overIdx){ clearHighlights(); dragIdx=overIdx=null; return; }
-    const arr=getItems();
-    const [moved]=arr.splice(dragIdx,1);
-    arr.splice(overIdx,0,moved);
-    setItems(arr);
-    clearHighlights();
-    dragIdx=overIdx=null;
-    afterDrop();
-  }
-
-  // ── MOUSE drag ──
-  listEl.addEventListener('mousedown', e=>{
-    const handle=e.target.closest('[data-handle]');
-    if(!handle) return;
-    const row=handle.closest('[data-drag-idx]');
-    if(!row) return;
-    dragIdx=+row.dataset.dragIdx;
-    row.classList.add('drag-ghost');
-    e.preventDefault();
-
-    function onMove(ev){
-      const els=document.elementsFromPoint(ev.clientX,ev.clientY);
-      const target=els.find(el=>el.dataset.dragIdx!=null&&el!==row);
-      if(target){
-        overIdx=+target.dataset.dragIdx;
-        rows().forEach(r=>r.classList.toggle('drag-target', +r.dataset.dragIdx===overIdx && +r.dataset.dragIdx!==dragIdx));
-      }
-    }
-    function onUp(){ applyDrop(); document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp); }
-    document.addEventListener('mousemove',onMove);
-    document.addEventListener('mouseup',onUp);
-  });
-
-  // ── TOUCH drag ──
-  listEl.addEventListener('touchstart', e=>{
-    const handle=e.target.closest('[data-handle]');
-    if(!handle) return;
-    const row=handle.closest('[data-drag-idx]');
-    if(!row) return;
-    dragIdx=+row.dataset.dragIdx;
-    row.classList.add('drag-ghost');
-    e.preventDefault();
-
-    function onMove(ev){
-      const t=ev.touches[0];
-      const els=document.elementsFromPoint(t.clientX,t.clientY);
-      const target=els.find(el=>el.dataset.dragIdx!=null&&el!==row);
-      if(target){
-        overIdx=+target.dataset.dragIdx;
-        rows().forEach(r=>r.classList.toggle('drag-target', +r.dataset.dragIdx===overIdx && +r.dataset.dragIdx!==dragIdx));
-      }
-    }
-    function onEnd(){ applyDrop(); listEl.removeEventListener('touchmove',onMove); listEl.removeEventListener('touchend',onEnd); }
-    listEl.addEventListener('touchmove',onMove,{passive:false});
-    listEl.addEventListener('touchend',onEnd);
-  },{passive:false});
+function moveSplit(i, dir){
+  moveItem(D.splits, i, i+dir);
+  saveData(); renderSplitEditRows();
+}
+function moveExercise(si, i, dir){
+  moveItem(D.splits[si].exercises, i, i+dir);
+  saveData(); renderExerciseEditRows(si);
 }
 
 // ── EDIT SPLITS MODAL ─────────────────────────────────────────────
@@ -1012,7 +951,7 @@ function openEditSplitsModal(){
   const overlay=document.createElement('div'); overlay.className='modal-overlay'; overlay.id='editSplitsModal';
   overlay.innerHTML=`<div class="modal">
     <h3>Edit Splits</h3>
-    <p>Drag ⠿ to reorder. Rename or remove workout days. Syncs across devices.</p>
+    <p>Use ↑ ↓ to reorder. Rename or remove workout days. Syncs across devices.</p>
     <div class="edit-split-list" id="splitList"></div>
     <button class="add-row-btn" onclick="addSplit()">+ Add Day</button>
     <div class="modal-actions" style="margin-top:20px">
@@ -1026,17 +965,16 @@ function openEditSplitsModal(){
 
 function renderSplitEditRows(){
   const list=document.getElementById('splitList'); if(!list) return;
+  const n=D.splits.length;
   list.innerHTML=D.splits.map((s,i)=>`
-    <div class="edit-split-row" data-drag-idx="${i}" style="user-select:none">
-      <span class="edit-split-handle draggable" data-handle title="Drag to reorder" style="color:var(--muted);font-size:1rem;flex-shrink:0;cursor:grab;padding:2px 4px">⠿</span>
+    <div class="edit-split-row" style="background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:10px 14px;display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
+        <button onclick="moveSplit(${i},-1)" ${i===0?'disabled':''} style="background:none;border:1px solid var(--border);border-radius:2px;color:${i===0?'var(--border)':'var(--muted)'};cursor:${i===0?'default':'pointer'};font-size:.65rem;padding:1px 6px;line-height:1.4;transition:all .15s;" ${i>0?'onmouseover="this.style.borderColor=\'var(--accent)\';this.style.color=\'var(--accent)\'"  onmouseout="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--muted)\'"':''}>↑</button>
+        <button onclick="moveSplit(${i},1)"  ${i===n-1?'disabled':''} style="background:none;border:1px solid var(--border);border-radius:2px;color:${i===n-1?'var(--border)':'var(--muted)'};cursor:${i===n-1?'default':'pointer'};font-size:.65rem;padding:1px 6px;line-height:1.4;transition:all .15s;" ${i<n-1?'onmouseover="this.style.borderColor=\'var(--accent)\';this.style.color=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--muted)\'"':''}>↓</button>
+      </div>
       <input type="text" value="${escHtml(s.name)}" onchange="renameSplit(${i},this.value)" placeholder="Split name" style="flex:1;background:transparent;border:none;color:var(--text);font-family:'DM Mono',monospace;font-size:.85rem;outline:none;">
-      <button class="edit-split-del" onclick="deleteSplit(${i})" title="Delete" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;padding:2px 6px;flex-shrink:0;transition:color .15s;">✕</button>
+      <button onclick="deleteSplit(${i})" title="Delete" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;padding:2px 6px;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--accent2)'" onmouseout="this.style.color='var(--muted)'">✕</button>
     </div>`).join('');
-  makeDraggable(list,
-    ()=>D.splits,
-    arr=>{ D.splits=arr; saveData(); },
-    ()=>renderSplitEditRows()
-  );
 }
 
 function renameSplit(i,val){ if(D.splits[i]) { D.splits[i].name=val; saveData(); } }
@@ -1055,7 +993,7 @@ function openEditExercisesModal(si){
   const overlay=document.createElement('div'); overlay.className='modal-overlay'; overlay.id='editExModal';
   overlay.innerHTML=`<div class="modal">
     <h3>Edit: ${escHtml(split.name)}</h3>
-    <p>Drag ⠿ to reorder. Add from catalogue or type a new name. History is preserved.</p>
+    <p>Use ↑ ↓ to reorder. Add from catalogue or type a new name. History is preserved.</p>
     <div class="edit-ex-list" id="exList_${si}"></div>
     <div style="display:flex;gap:8px;margin-top:4px">
       <button class="add-row-btn" style="flex:1" onclick="addExercise(${si})">+ New Exercise</button>
@@ -1073,19 +1011,18 @@ function openEditExercisesModal(si){
 function renderExerciseEditRows(si){
   const list=document.getElementById(`exList_${si}`); if(!list) return;
   const exs=D.splits[si].exercises;
-  if(!exs.length){ list.innerHTML=`<div class="empty-state" style="padding:16px">No exercises yet</div>`; return; }
+  const n=exs.length;
+  if(!n){ list.innerHTML=`<div class="empty-state" style="padding:16px">No exercises yet</div>`; return; }
   list.innerHTML=exs.map((e,i)=>`
-    <div class="edit-ex-row" data-drag-idx="${i}" style="user-select:none;background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:10px 14px;display:flex;align-items:center;gap:8px;margin-bottom:6px">
-      <span class="draggable" data-handle title="Drag to reorder" style="color:var(--muted);font-size:1rem;flex-shrink:0;cursor:grab;padding:2px 4px">⠿</span>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:10px 14px;display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
+        <button onclick="moveExercise(${si},${i},-1)" ${i===0?'disabled':''} style="background:none;border:1px solid var(--border);border-radius:2px;color:${i===0?'var(--border)':'var(--muted)'};cursor:${i===0?'default':'pointer'};font-size:.65rem;padding:1px 6px;line-height:1.4;transition:all .15s;" ${i>0?'onmouseover="this.style.borderColor=\'var(--accent)\';this.style.color=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--muted)\'"':''}>↑</button>
+        <button onclick="moveExercise(${si},${i},1)"  ${i===n-1?'disabled':''} style="background:none;border:1px solid var(--border);border-radius:2px;color:${i===n-1?'var(--border)':'var(--muted)'};cursor:${i===n-1?'default':'pointer'};font-size:.65rem;padding:1px 6px;line-height:1.4;transition:all .15s;" ${i<n-1?'onmouseover="this.style.borderColor=\'var(--accent)\';this.style.color=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--muted)\'"':''}>↓</button>
+      </div>
       <input type="text" value="${escHtml(e.name)}" onchange="renameExercise(${si},${i},this.value)" placeholder="Exercise name" style="flex:1;background:transparent;border:none;color:var(--text);font-family:'DM Mono',monospace;font-size:.82rem;outline:none;">
-      <span style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted)">${e.history.length} logs</span>
+      <span style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);flex-shrink:0">${e.history.length} logs</span>
       <button onclick="deleteExercise(${si},${i})" title="Delete" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;padding:2px 6px;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--accent2)'" onmouseout="this.style.color='var(--muted)'">✕</button>
     </div>`).join('');
-  makeDraggable(list,
-    ()=>D.splits[si].exercises,
-    arr=>{ D.splits[si].exercises=arr; saveData(); },
-    ()=>renderExerciseEditRows(si)
-  );
 }
 
 function renameExercise(si,ei,val){ if(D.splits[si]?.exercises[ei]) { D.splits[si].exercises[ei].name=val; saveData(); } }
@@ -1378,8 +1315,8 @@ Object.assign(window,{
   submitWorkout, deleteLog, openEditLog, saveEditLog, editWarmup,
   openAltsModal, applySwap, revertSwap, closeModal,
   openNotesModal, saveNotes,
-  openEditSplitsModal, renameSplit, deleteSplit, addSplit, renderSplitEditRows,
-  openEditExercisesModal, renameExercise, deleteExercise, addExercise, renderExerciseEditRows,
+  openEditSplitsModal, renameSplit, deleteSplit, addSplit, renderSplitEditRows, moveSplit,
+  openEditExercisesModal, renameExercise, deleteExercise, addExercise, renderExerciseEditRows, moveExercise,
   openCataloguePickerModal, addFromCatalogue, pickerFilter,
   setBig3,
 });
