@@ -307,13 +307,21 @@
 </div>
 
 <script>
-// ═══ FIRESTORE REST API (no SDK — loads instantly) ════════════════════
+// ═══ FIRESTORE REST API ═══════════════════════════════════════════════
 const FS_PROJECT = 'gym-tracker-2e213';
 const FS_KEY     = 'AIzaSyAzWaGqMZ0Y7cZijbckSHTiW4knuavqKo0';
-const FS_DOC     = `gymdata/maeb34`;
+const FS_DOC     = 'gymdata/maeb34';
 const FS_BASE    = `https://firestore.googleapis.com/v1/projects/${FS_PROJECT}/databases/(default)/documents/${FS_DOC}`;
 
-// Convert our plain JS object → Firestore REST "fields" format
+// Fetch with a hard timeout — never hangs forever
+function fetchWithTimeout(url, opts={}, ms=5000){
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), ms);
+  return fetch(url, {...opts, signal:controller.signal})
+    .finally(()=>clearTimeout(timer));
+}
+
+// JS → Firestore field format
 function toFS(val){
   if(val===null||val===undefined) return {nullValue:null};
   if(typeof val==='boolean')      return {booleanValue:val};
@@ -324,7 +332,7 @@ function toFS(val){
   return {stringValue:String(val)};
 }
 
-// Convert Firestore REST response → plain JS object
+// Firestore field format → JS
 function fromFS(fv){
   if(!fv) return null;
   if('nullValue'    in fv) return null;
@@ -338,40 +346,36 @@ function fromFS(fv){
 }
 
 async function fsGet(){
-  const r = await fetch(`${FS_BASE}?key=${FS_KEY}`,{cache:'no-store'});
+  const r = await fetchWithTimeout(`${FS_BASE}?key=${FS_KEY}`, {cache:'no-store'});
   if(r.status===404) return null;
-  if(!r.ok) throw new Error(`Firestore GET ${r.status}`);
-  const doc = await r.json();
-  return fromFS({mapValue:{fields:doc.fields||{}}});
+  if(!r.ok) throw new Error(`GET ${r.status}`);
+  const d = await r.json();
+  return fromFS({mapValue:{fields:d.fields||{}}});
 }
 
 async function fsSet(data){
-  // PATCH with updateMask clears old fields and writes new ones atomically
   const fields = toFS(data).mapValue.fields;
-  const fieldPaths = Object.keys(fields).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&');
-  const r = await fetch(`${FS_BASE}?key=${FS_KEY}&${fieldPaths}`,{
+  const mask = Object.keys(fields).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&');
+  const r = await fetchWithTimeout(`${FS_BASE}?key=${FS_KEY}&${mask}`, {
     method:'PATCH',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({fields})
   });
-  if(!r.ok) throw new Error(`Firestore PATCH ${r.status}`);
+  if(!r.ok) throw new Error(`PATCH ${r.status}`);
 }
 
-// Long-poll for cross-device sync (Firestore REST doesn't do WebSocket,
-// so we poll every 15s — lightweight and reliable)
-let pollTimer = null;
-let lastKnownUpdate = null;
+// Poll every 15s to detect changes from another device
+let pollTimer=null, lastKnownUpdate=null;
 function startPolling(){
   clearInterval(pollTimer);
   pollTimer = setInterval(async ()=>{
     if(isSaving) return;
     try{
-      const r = await fetch(`${FS_BASE}?key=${FS_KEY}&fields=updateTime`,{cache:'no-store'});
+      const r = await fetchWithTimeout(`${FS_BASE}?key=${FS_KEY}&fields=updateTime`, {cache:'no-store'});
       if(!r.ok) return;
       const meta = await r.json();
       const upd = meta.updateTime||'';
       if(lastKnownUpdate && upd !== lastKnownUpdate){
-        // Something changed on another device — pull full doc
         const incoming = await fsGet();
         if(incoming){
           ensureFields(incoming);
@@ -385,7 +389,6 @@ function startPolling(){
           else if(nav.view==='prs')          showPRs();
           else if(nav.view==='catalogue')    showCatalogue();
           else if(nav.view==='split')        showExercises(nav.si);
-          // exercise view excluded — never overwrite open form
         }
       }
       lastKnownUpdate = upd;
@@ -518,39 +521,48 @@ function userIsMidSession(){
 }
 
 async function initData(){
-  // ── Step 1: render from cache instantly ──
+  // ── STEP 1: render from cache immediately — app is usable in <100ms ──
   const cached = loadCache();
   if(cached){
     D = cached;
     ensureFields(D);
-    setSyncStatus('synced');
     updateAchCount();
     renderNav();
+    setSyncStatus('synced');
+  } else {
+    // No cache at all — first ever open. Show default splits immediately
+    // so the user isn't stuck staring at a spinner.
+    D = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    updateAchCount();
+    renderNav();
+    setSyncStatus('offline');
   }
 
-  // ── Step 2: fetch latest from Firestore REST in background ──
+  // ── STEP 2: fetch from Firestore in background (5s timeout) ──
+  // This will update D silently if newer data exists.
   try {
-    const remote = await fsGet();
+    const remote = await fsGet(); // aborts after 5s if no response
     if(remote){
       D = remote;
       ensureFields(D);
       saveCache(D);
-      lastKnownUpdate = Date.now(); // seed poll baseline
-    } else if(!cached){
-      // No doc yet — first ever use
-      D = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      lastKnownUpdate = 'loaded';
+      setSyncStatus('synced');
+      updateAchCount();
+      if(!userIsMidSession()) renderNav();
+    } else {
+      // No doc in Firestore yet — write our defaults up
       await fsSet(D);
       saveCache(D);
+      setSyncStatus('synced');
     }
-    setSyncStatus('synced');
-    updateAchCount();
-    if(!userIsMidSession()) renderNav();
   } catch(e){
-    if(!cached) D = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    // Timeout or network error — stay on cache/defaults, show offline
     setSyncStatus('offline');
+    if(cached) showToast('Using cached data — Firebase unreachable');
   }
 
-  // ── Step 3: start 15s poll for cross-device changes ──
+  // ── STEP 3: start background 15s poll for cross-device changes ──
   startPolling();
 }
 
@@ -1433,10 +1445,7 @@ Object.assign(window,{
 });
 
 // ═══ INIT ════════════════════════════════════════════════════════════
-// Show loading only if no cache (first ever open)
-if(!localStorage.getItem('gymTrackerCache')){
-  document.getElementById('app').innerHTML=`<div class="loading-screen"><div class="spinner"></div><p>Loading your data…</p></div>`;
-}
+// initData renders from cache immediately — no loading screen needed
 initData();
 updateAchCount();
 
