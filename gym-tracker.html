@@ -268,6 +268,21 @@
   @keyframes spin{to{transform:rotate(360deg);}}
   .loading-screen p{font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.2em;color:var(--muted);}
 
+  /* IPHONE / MOBILE LAYOUT FIXES */
+  #app{max-width:860px;margin:0 auto;padding:32px 12px 80px;}
+  .history-table{table-layout:fixed;width:100%;}
+  .history-table th,.history-table td{padding:9px 6px;font-size:.72rem;overflow:hidden;text-overflow:ellipsis;}
+  .history-table th:first-child,.history-table td:first-child{width:38%;}
+  .history-table th:nth-child(2),.history-table td:nth-child(2){width:16%;}
+  .history-table th:nth-child(3),.history-table td:nth-child(3){width:12%;}
+  .history-table th:nth-child(4),.history-table td:nth-child(4){width:12%;}
+  .history-table th:last-child,.history-table td:last-child{width:22%;text-align:right;}
+  .chart-wrap{height:260px;}
+  .charts-grid{gap:10px;}
+  .card{padding:18px 14px;}
+  .set-row{gap:8px;}
+  .warmup-row{gap:8px;}
+
   @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
   .animate{animation:fadeUp .3s ease both;}
   .animate-delay-1{animation-delay:.05s;}
@@ -276,13 +291,17 @@
 
   @media(max-width:580px){
     .split-grid{grid-template-columns:1fr 1fr;}
-    header{padding:12px 16px;}
-    #app{padding:24px 16px 60px;}
-    .detail-title{font-size:2rem;}
+    header{padding:12px 12px;}
+    #app{padding:20px 10px 60px;}
+    .detail-title{font-size:1.8rem;}
     .ach-grid{grid-template-columns:repeat(2,1fr);}
     .pr-grid{grid-template-columns:1fr 1fr;}
     .big3-row{grid-template-columns:1fr;}
     header .subtitle{display:none;}
+    .chart-wrap{height:220px;}
+    .section-header h2{font-size:1.8rem;}
+    .icon-btn span:not(.sync-dot){display:none;}
+    .icon-btn{padding:6px 8px;}
   }
 </style>
 </head>
@@ -826,7 +845,7 @@ function showExercises(si){
     const swapped=isSwapped(si,i), eff=getEff(si,i);
     const sorted=[...eff.history].sort((a,b)=>a.date.localeCompare(b.date));
     const last=sorted[sorted.length-1];
-    const meta=last?`Last: ${last.set1.weight}kg — ${last.date}`:'No sessions yet';
+    const meta=last?`Last: ${last.set1.weight}kg — ${fmtDate(last.date)}`:'No sessions yet';
     const hasAlts=(ex.alternatives||[]).length>0;
     html+=`<div class="ex-row animate animate-delay-${Math.min(i+1,3)} ${swapped?'swapped':''}" onclick="showExerciseDetail(${si},${i})">
       <div class="ex-row-body">
@@ -1069,7 +1088,7 @@ function renderHistory(ex,si,ei){
     const pr=e.progressed?`<span class="badge-pr">↑</span>`:'';
     const splitBadge=multiSplit?`<span class="alt-item-tag" style="margin-left:4px;font-size:.5rem">${e._splitName}</span>`:'';
     html+=`<tr>
-      <td style="white-space:nowrap">${e.date}${pr}${splitBadge}</td>
+      <td style="white-space:nowrap">${fmtDate(e.date)}${pr}${splitBadge}</td>
       <td style="white-space:nowrap">${e.set1.weight}kg</td>
       <td class="${e.progressed?'fire':''}" style="white-space:nowrap">${e.set1.reps}</td>
       <td class="${e.progressed?'fire':''}" style="white-space:nowrap">${e.set2.reps}</td>
@@ -1126,12 +1145,40 @@ function saveEditLog(si,ei,idx){
 }
 
 // ── CHARTS ────────────────────────────────────────────────────────
+// Split colour map — matches split colours on home screen
+const SPLIT_COLORS=['#e8ff47','#ff6b35','#47ffb2','#a78bfa','#60a5fa','#f472b6'];
+function getSplitColor(splitName){
+  const idx=D.splits.findIndex(s=>s.name===splitName);
+  return idx>=0?SPLIT_COLORS[idx%SPLIT_COLORS.length]:'#47ffb2';
+}
+
+function buildMergedHistory(exName){
+  // Merge history for this exercise across all splits, tagged with split
+  const merged=[];
+  D.splits.forEach(split=>{
+    split.exercises.forEach(e=>{
+      if(e.name.toLowerCase()===exName.toLowerCase()){
+        e.history.forEach(h=>{
+          const dup=merged.find(x=>x.date===h.date&&x.set1.weight===h.set1.weight&&x.set1.reps===h.set1.reps);
+          if(!dup) merged.push({...h,_splitName:split.name});
+        });
+      }
+    });
+  });
+  merged.sort((a,b)=>a.date.localeCompare(b.date));
+  return merged;
+}
+
 function renderCharts(ex){
-  const sorted=[...ex.history].sort((a,b)=>a.date.localeCompare(b.date));
-  const labels=sorted.map(e=>e.date);
+  const sorted=buildMergedHistory(ex.name);
+  if(!sorted.length) return;
+  const labels=sorted.map(e=>fmtDate(e.date));
   const weights=sorted.map(e=>Math.max(e.set1.weight,e.set2.weight));
   const avgReps=sorted.map(e=>{ const t=e.set1.reps+e.set2.reps,s=(e.set1.reps>0?1:0)+(e.set2.reps>0?1:0); return s?+(t/s).toFixed(1):0; });
   const volume=sorted.map(e=>(e.set1.weight*e.set1.reps)+(e.set2.weight*e.set2.reps));
+  const volColors=sorted.map(e=>{ const c=getSplitColor(e._splitName); return c+'55'; }); // 33% opacity fill
+  const volBorders=sorted.map(e=>getSplitColor(e._splitName));
+
   const base={responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
     plugins:{legend:{labels:{color:'#6b6b7a',boxWidth:10,font:{size:9}}},tooltip:{backgroundColor:'#1c1c22',borderColor:'#2a2a32',borderWidth:1,titleColor:'#6b6b7a',bodyColor:'#f0f0f5',padding:10}},
     scales:{x:{grid:{color:'#1e1e24'},ticks:{maxTicksLimit:8,font:{size:9}}}}};
@@ -1145,9 +1192,9 @@ function renderCharts(ex){
   }}});
   const ctxV=document.getElementById('chartVolume');
   if(ctxV) charts.volume=new Chart(ctxV,{type:'bar',data:{labels,datasets:[
-    {label:'Volume (kg)',data:volume,backgroundColor:'rgba(71,255,178,.15)',borderColor:'#47ffb2',borderWidth:1.5,borderRadius:2,hoverBackgroundColor:'rgba(71,255,178,.3)',yAxisID:'y'},
-    {label:'Trend',data:volume,type:'line',borderColor:'#a78bfa',backgroundColor:'transparent',pointBackgroundColor:'#a78bfa',pointRadius:3,borderWidth:2,tension:.35,yAxisID:'y'}
-  ]},options:{...base,scales:{x:base.scales.x,y:{position:'left',grid:{color:'#1e1e24'},ticks:{font:{size:9},callback:v=>v+'kg'}}}}});
+    {label:'Volume',data:volume,backgroundColor:volColors,borderColor:volBorders,borderWidth:1.5,borderRadius:2,yAxisID:'y'},
+    {label:'Trend',data:volume,type:'line',borderColor:'#ffffff44',backgroundColor:'transparent',pointRadius:0,borderWidth:1.5,tension:.35,yAxisID:'y'}
+  ]},options:{...base,plugins:{...base.plugins,legend:{display:false}},scales:{x:base.scales.x,y:{position:'left',grid:{color:'#1e1e24'},ticks:{font:{size:9},callback:v=>v+'kg'}}}}});
 }
 
 // ── PR PAGE ────────────────────────────────────────────────────────
@@ -1205,7 +1252,7 @@ function showPRs(){
         <div class="pr-exercise">${p.name}</div>
         <div class="pr-weight">${p.weight}<span style="font-size:1.2rem">kg</span></div>
         <div class="pr-detail">${p.set1.weight}kg × ${p.set1.reps} / ${p.set2.weight}kg × ${p.set2.reps}</div>
-        <div class="pr-date">${p.date}</div>
+        <div class="pr-date">${fmtDate(p.date)}</div>
       </div>`;
     });
     html+=`</div></div>`;
@@ -1219,7 +1266,7 @@ function showPRs(){
         <div class="pr-exercise">${p.name}</div>
         <div class="pr-weight">${p.weight}<span style="font-size:1.2rem">kg</span></div>
         <div class="pr-detail">${p.set1.weight}kg × ${p.set1.reps} / ${p.set2.weight}kg × ${p.set2.reps}</div>
-        <div class="pr-date">${p.date}</div>
+        <div class="pr-date">${fmtDate(p.date)}</div>
       </div>`;
     });
     html+=`</div></div>`;
@@ -1444,7 +1491,7 @@ function showCatalogue(groupKey=''){
   const renderRow=(e,grey)=>{
     const best=e.history.length?Math.max(...e.history.map(h=>Math.max(h.set1.weight,h.set2.weight))):null;
     const splitTags=e.refs.map(r=>`<span class="cat-tag">${escHtml(r.splitName)}</span>`).join('');
-    return `<div class="cat-row${grey?' greyed':''}" onclick="${grey?'':(`showCatalogueDetail('${escHtml(e.name)}')`)}">
+    return `<div class="cat-row" onclick="showCatalogueDetail('${escHtml(e.name)}')" style="${grey?'opacity:.6':''}">
       <div class="cat-row-body">
         <div class="cat-row-name">${escHtml(e.name)}</div>
         <div class="cat-row-meta">${splitTags||`<span style="color:var(--muted);font-size:.6rem">Not in any split</span>`}</div>
@@ -1452,7 +1499,7 @@ function showCatalogue(groupKey=''){
       ${best!==null
         ?`<div style="text-align:right;flex-shrink:0"><div class="cat-row-pr">${best}<small>kg</small></div><div class="cat-row-sessions">${e.history.length} sessions</div></div>`
         :`<div class="cat-row-sessions" style="flex-shrink:0">no logs</div>`}
-      ${grey?'':`<span style="color:var(--muted)">›</span>`}
+      <span style="color:var(--muted)">›</span>
     </div>`;
   };
 
@@ -1460,6 +1507,7 @@ function showCatalogue(groupKey=''){
     <button class="back-btn animate" onclick="showCatalogue('')">${backIcon()} Catalogue</button>
     <div class="section-header animate">
       <h2>${group.icon} ${group.name}</h2>
+      <button class="icon-btn" onclick="openAddToCatalogueModal('${groupKey}')" style="flex-shrink:0">+ Add Exercise</button>
     </div>
     <div class="cat-search-wrap animate">
       <span class="cat-search-icon">🔍</span>
@@ -1515,7 +1563,7 @@ function showCatalogueDetail(name){
       const pr=h.progressed?`<span class="badge-pr">↑</span>`:'';
       const splitBadge=multiSplit&&h._splitName?`<span class="alt-item-tag" style="margin-left:4px;font-size:.5rem">${h._splitName}</span>`:'';
       histHtml+=`<tr>
-        <td style="white-space:nowrap">${h.date}${pr}${splitBadge}</td>
+        <td style="white-space:nowrap">${fmtDate(h.date)}${pr}${splitBadge}</td>
         <td style="white-space:nowrap">${h.set1.weight}kg</td>
         <td class="${h.progressed?'fire':''}" style="white-space:nowrap">${h.set1.reps}</td>
         <td class="${h.progressed?'fire':''}" style="white-space:nowrap">${h.set2.reps}</td>
@@ -1535,6 +1583,7 @@ function showCatalogueDetail(name){
         <button class="swap-btn" onclick="openGroupEditModal('${escHtml(entry.name)}','${entry.group}')" style="font-size:.6rem;padding:4px 10px">
           ${MUSCLE_GROUPS.find(g=>g.key===entry.group)?.icon||'📋'} ${MUSCLE_GROUPS.find(g=>g.key===entry.group)?.name||'Uncategorised'} ✎
         </button>
+        <button class="swap-btn" onclick="openCatalogueManageModal('${escHtml(entry.name)}')" style="font-size:.6rem;padding:4px 10px">⚙ Manage</button>
       </div>
     </div>
 
@@ -1563,10 +1612,12 @@ function showCatalogueDetail(name){
 
   if(entry.history.length>=2){
     const sorted=[...entry.history].sort((a,b)=>a.date.localeCompare(b.date));
-    const labels=sorted.map(h=>h.date);
+    const labels=sorted.map(h=>fmtDate(h.date));
     const weights=sorted.map(h=>Math.max(h.set1.weight,h.set2.weight));
     const avgReps=sorted.map(h=>{ const t=h.set1.reps+h.set2.reps,s=(h.set1.reps>0?1:0)+(h.set2.reps>0?1:0); return s?+(t/s).toFixed(1):0; });
     const volume=sorted.map(h=>(h.set1.weight*h.set1.reps)+(h.set2.weight*h.set2.reps));
+    const volColors=sorted.map(h=>{ const c=getSplitColor(h._splitName||''); return c+'55'; });
+    const volBorders=sorted.map(h=>getSplitColor(h._splitName||''));
     const base={responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
       plugins:{legend:{labels:{color:'#6b6b7a',boxWidth:10,font:{size:9}}},tooltip:{backgroundColor:'#1c1c22',borderColor:'#2a2a32',borderWidth:1,titleColor:'#6b6b7a',bodyColor:'#f0f0f5',padding:10}},
       scales:{x:{grid:{color:'#1e1e24'},ticks:{maxTicksLimit:8,font:{size:9}}}}};
@@ -1580,9 +1631,9 @@ function showCatalogueDetail(name){
     }}});
     const ctxV=document.getElementById('catChartV');
     if(ctxV) charts.catV=new Chart(ctxV,{type:'bar',data:{labels,datasets:[
-      {label:'Volume (kg)',data:volume,backgroundColor:'rgba(71,255,178,.15)',borderColor:'#47ffb2',borderWidth:1.5,borderRadius:2,hoverBackgroundColor:'rgba(71,255,178,.3)',yAxisID:'y'},
-      {label:'Trend',data:volume,type:'line',borderColor:'#a78bfa',backgroundColor:'transparent',pointBackgroundColor:'#a78bfa',pointRadius:3,borderWidth:2,tension:.35,yAxisID:'y'}
-    ]},options:{...base,scales:{x:base.scales.x,y:{position:'left',grid:{color:'#1e1e24'},ticks:{font:{size:9},callback:v=>v+'kg'}}}}});
+      {label:'Volume',data:volume,backgroundColor:volColors,borderColor:volBorders,borderWidth:1.5,borderRadius:2,yAxisID:'y'},
+      {label:'Trend',data:volume,type:'line',borderColor:'#ffffff44',backgroundColor:'transparent',pointRadius:0,borderWidth:1.5,tension:.35,yAxisID:'y'}
+    ]},options:{...base,plugins:{...base.plugins,legend:{display:false}},scales:{x:base.scales.x,y:{position:'left',grid:{color:'#1e1e24'},ticks:{font:{size:9},callback:v=>v+'kg'}}}}});
   }
 }
 
@@ -1684,7 +1735,116 @@ function showAchievements(){
   html+=`</div>`; document.getElementById('app').innerHTML=html;
 }
 
-// ── CATALOGUE GROUP EDIT ─────────────────────────────────────────
+// ── CATALOGUE MANAGEMENT ─────────────────────────────────────────
+function openCatalogueManageModal(exName){
+  const all=buildCatalogue();
+  const entry=all.find(e=>e.name===exName);
+  if(!entry) return;
+  const usedInSplits=entry.refs.map(r=>r.splitName);
+  const overlay=document.createElement('div'); overlay.className='modal-overlay'; overlay.id='catManageModal';
+  overlay.innerHTML=`<div class="modal">
+    <h3>Manage Exercise</h3>
+    ${usedInSplits.length?`<p>Used in: ${usedInSplits.map(s=>`<span class="alt-item-tag">${escHtml(s)}</span>`).join(' ')}</p>`:'<p style="color:var(--muted)">Not currently in any split.</p>'}
+    <div class="form-group" style="margin-top:12px"><label>Rename</label>
+      <input type="text" id="catRenameInput" value="${escHtml(exName)}" placeholder="New name">
+    </div>
+    <div class="modal-actions" style="flex-direction:column;gap:8px">
+      <button class="btn-primary" onclick="renameCatalogueExercise('${escHtml(exName)}')">Save Name</button>
+      <button class="btn-danger" onclick="deleteCatalogueExercise('${escHtml(exName)}')">Delete Exercise${usedInSplits.length?` (removes from ${usedInSplits.length} split${usedInSplits.length>1?'s':''})`:''}</button>
+      <button class="btn-secondary" onclick="closeModal('catManageModal')">Cancel</button>
+    </div>
+  </div>`;
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) closeModal('catManageModal'); });
+  document.body.appendChild(overlay);
+  setTimeout(()=>document.getElementById('catRenameInput')?.focus(),60);
+}
+
+function renameCatalogueExercise(oldName){
+  const newName=document.getElementById('catRenameInput')?.value.trim();
+  if(!newName||newName===oldName){ closeModal('catManageModal'); return; }
+  // Rename in all splits
+  D.splits.forEach(split=>{
+    split.exercises.forEach(ex=>{
+      if(ex.name===oldName) ex.name=newName;
+      // Also rename inside alternatives lists
+      if(ex.alternatives) ex.alternatives=ex.alternatives.map(a=>a===oldName?newName:a);
+    });
+  });
+  // Rename in altHistory
+  if(D.altHistory&&D.altHistory[oldName]){
+    D.altHistory[newName]=D.altHistory[oldName];
+    delete D.altHistory[oldName];
+  }
+  // Rename in catalogueGroups
+  if(D.catalogueGroups){
+    const key=oldName.trim().toLowerCase();
+    if(D.catalogueGroups[key]){
+      D.catalogueGroups[newName.trim().toLowerCase()]=D.catalogueGroups[key];
+      delete D.catalogueGroups[key];
+    }
+  }
+  saveData();
+  closeModal('catManageModal');
+  showToast(`Renamed to "${newName}" ✓`);
+  showCatalogueDetail(newName);
+}
+
+function deleteCatalogueExercise(name){
+  const all=buildCatalogue();
+  const entry=all.find(e=>e.name===name);
+  const usedInSplits=entry?entry.refs.map(r=>r.splitName):[];
+  const histCount=entry?entry.history.length:0;
+  let msg=`Delete "${name}" from the catalogue?`;
+  if(usedInSplits.length) msg+=`\n\nThis will also remove it from: ${usedInSplits.join(', ')}.`;
+  if(histCount) msg+=`\n\n⚠️ This will permanently delete ${histCount} logged session(s). This cannot be undone.`;
+  if(!confirm(msg)) return;
+  // Remove from all splits
+  D.splits.forEach(split=>{
+    split.exercises=split.exercises.filter(e=>e.name!==name);
+  });
+  // Remove from altHistory
+  if(D.altHistory&&D.altHistory[name]) delete D.altHistory[name];
+  // Remove from catalogueGroups
+  if(D.catalogueGroups) delete D.catalogueGroups[name.trim().toLowerCase()];
+  saveData();
+  closeModal('catManageModal');
+  showToast(`${name} deleted ✓`);
+  showCatalogue('');
+}
+
+function openAddToCatalogueModal(groupKey){
+  const overlay=document.createElement('div'); overlay.className='modal-overlay'; overlay.id='addCatModal';
+  overlay.innerHTML=`<div class="modal">
+    <h3>Add New Exercise</h3>
+    <p>Create a new exercise in the catalogue. It won't appear in any split until you add it.</p>
+    <div class="form-group"><label>Exercise Name</label>
+      <input type="text" id="newCatName" placeholder="e.g. Incline Cable Fly" autocomplete="off">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="addToCatalogue('${groupKey}')">Add to Catalogue</button>
+      <button class="btn-secondary" onclick="closeModal('addCatModal')">Cancel</button>
+    </div>
+  </div>`;
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) closeModal('addCatModal'); });
+  document.body.appendChild(overlay);
+  setTimeout(()=>document.getElementById('newCatName')?.focus(),60);
+}
+
+function addToCatalogue(groupKey){
+  const name=document.getElementById('newCatName')?.value.trim();
+  if(!name){ showToast('Enter a name.'); return; }
+  const all=buildCatalogue();
+  if(all.find(e=>e.name.toLowerCase()===name.toLowerCase())){ showToast('Already in catalogue.'); return; }
+  // Store as an altHistory entry with no history — this makes it appear in catalogue
+  if(!D.altHistory) D.altHistory={};
+  D.altHistory[name]=[];
+  if(!D.catalogueGroups) D.catalogueGroups={};
+  D.catalogueGroups[name.trim().toLowerCase()]=groupKey||guessGroup(name);
+  saveData();
+  closeModal('addCatModal');
+  showToast(`${name} added to catalogue ✓`);
+  showCatalogue(groupKey);
+}
 function openGroupEditModal(name, currentGroup){
   const overlay=document.createElement('div'); overlay.className='modal-overlay'; overlay.id='groupEditModal';
   const opts=MUSCLE_GROUPS.filter(g=>g.key!=='all').map(g=>
@@ -1711,6 +1871,12 @@ function saveCatalogueGroup(name, groupKey){
 
 // ── HELPERS ───────────────────────────────────────────────────────
 function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Format ISO date (YYYY-MM-DD) to UK display (DD/MM/YYYY)
+function fmtDate(iso){
+  if(!iso||iso.length<10) return iso||'';
+  const [y,m,d]=iso.split('-');
+  return `${d}/${m}/${y}`;
+}
 
 // ═══ EXPOSE GLOBALS ══════════════════════════════════════════════════
 Object.assign(window,{
@@ -1725,6 +1891,8 @@ Object.assign(window,{
   openAddAltModal, filterAddAlt, addAltFromCatalogue,
   openMultiplierModal, saveMultiplier,
   openGroupEditModal, saveCatalogueGroup,
+  openCatalogueManageModal, renameCatalogueExercise, deleteCatalogueExercise,
+  openAddToCatalogueModal, addToCatalogue,
   setBig3,
 });
 
