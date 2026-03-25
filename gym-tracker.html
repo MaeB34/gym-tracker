@@ -1336,7 +1336,19 @@ function renderSplitEditRows(){
 
 function renameSplit(i,val){ if(D.splits[i]) { D.splits[i].name=val; saveData(); } }
 function deleteSplit(i){
-  if(!confirm(`Delete "${D.splits[i].name}" and all its exercises? This cannot be undone.`)) return;
+  if(!confirm(`Remove "${D.splits[i].name}" from your schedule? All exercise histories will be preserved in the catalogue.`)) return;
+  // Migrate all exercise histories before removing
+  D.splits[i].exercises.forEach(ex=>{
+    if(ex.history.length){
+      if(!D.altHistory) D.altHistory={};
+      if(!D.altHistory[ex.name]) D.altHistory[ex.name]=[];
+      ex.history.forEach(h=>{
+        const dup=D.altHistory[ex.name].find(x=>x.date===h.date&&x.set1.weight===h.set1.weight&&x.set1.reps===h.set1.reps);
+        if(!dup) D.altHistory[ex.name].push(h);
+      });
+      D.altHistory[ex.name].sort((a,b)=>a.date.localeCompare(b.date));
+    }
+  });
   D.splits.splice(i,1); saveData(); closeModal('editSplitsModal'); showSplits();
 }
 function addSplit(){
@@ -1350,12 +1362,9 @@ function openEditExercisesModal(si){
   const overlay=document.createElement('div'); overlay.className='modal-overlay'; overlay.id='editExModal';
   overlay.innerHTML=`<div class="modal">
     <h3>Edit: ${escHtml(split.name)}</h3>
-    <p>Use ↑ ↓ to reorder. Add from catalogue or type a new name. History is preserved.</p>
+    <p>Use ↑ ↓ to reorder. Remove an exercise to preserve its data in the catalogue. Rename exercises from the catalogue.</p>
     <div class="edit-ex-list" id="exList_${si}"></div>
-    <div style="display:flex;gap:8px;margin-top:4px">
-      <button class="add-row-btn" style="flex:1" onclick="addExercise(${si})">+ New Exercise</button>
-      <button class="add-row-btn" style="flex:1;border-color:var(--accent);color:var(--accent)" onclick="openCataloguePickerModal(${si})">📚 From Catalogue</button>
-    </div>
+    <button class="add-row-btn" style="width:100%;border-color:var(--accent);color:var(--accent)" onclick="openCataloguePickerModal(${si})">📚 Add from Catalogue</button>
     <div class="modal-actions" style="margin-top:20px">
       <button class="btn-primary" onclick="closeModal('editExModal');showExercises(${si})">Done</button>
     </div>
@@ -1369,29 +1378,38 @@ function renderExerciseEditRows(si){
   const list=document.getElementById(`exList_${si}`); if(!list) return;
   const exs=D.splits[si].exercises;
   const n=exs.length;
-  if(!n){ list.innerHTML=`<div class="empty-state" style="padding:16px">No exercises yet</div>`; return; }
+  if(!n){ list.innerHTML=`<div class="empty-state" style="padding:16px">No exercises — add from catalogue</div>`; return; }
   list.innerHTML=exs.map((e,i)=>`
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:10px 14px;display:flex;align-items:center;gap:8px;margin-bottom:6px">
       <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
         <button onclick="moveExercise(${si},${i},-1)" ${i===0?'disabled':''} style="background:none;border:1px solid var(--border);border-radius:2px;color:${i===0?'var(--border)':'var(--muted)'};cursor:${i===0?'default':'pointer'};font-size:.65rem;padding:1px 6px;line-height:1.4;transition:all .15s;" ${i>0?'onmouseover="this.style.borderColor=\'var(--accent)\';this.style.color=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--muted)\'"':''}>↑</button>
         <button onclick="moveExercise(${si},${i},1)"  ${i===n-1?'disabled':''} style="background:none;border:1px solid var(--border);border-radius:2px;color:${i===n-1?'var(--border)':'var(--muted)'};cursor:${i===n-1?'default':'pointer'};font-size:.65rem;padding:1px 6px;line-height:1.4;transition:all .15s;" ${i<n-1?'onmouseover="this.style.borderColor=\'var(--accent)\';this.style.color=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--muted)\'"':''}>↓</button>
       </div>
-      <input type="text" value="${escHtml(e.name)}" onchange="renameExercise(${si},${i},this.value)" placeholder="Exercise name" style="flex:1;background:transparent;border:none;color:var(--text);font-family:'DM Mono',monospace;font-size:.82rem;outline:none;">
+      <span style="flex:1;font-family:'DM Mono',monospace;font-size:.82rem;color:var(--text)">${escHtml(e.name)}</span>
       <span style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);flex-shrink:0">${e.history.length} logs</span>
-      <button onclick="deleteExercise(${si},${i})" title="Delete" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;padding:2px 6px;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--accent2)'" onmouseout="this.style.color='var(--muted)'">✕</button>
+      <button onclick="deleteExercise(${si},${i})" title="Remove from split" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;padding:2px 6px;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--accent2)'" onmouseout="this.style.color='var(--muted)'">✕</button>
     </div>`).join('');
 }
 
 function renameExercise(si,ei,val){ if(D.splits[si]?.exercises[ei]) { D.splits[si].exercises[ei].name=val; saveData(); } }
 function deleteExercise(si,ei){
   const ex=D.splits[si].exercises[ei];
-  if(ex.history.length&&!confirm(`Delete "${ex.name}"? This removes ${ex.history.length} logged session(s).`)) return;
-  D.splits[si].exercises.splice(ei,1); saveData(); renderExerciseEditRows(si);
+  // Migrate history to altHistory so data is preserved in the catalogue
+  if(ex.history.length){
+    if(!D.altHistory) D.altHistory={};
+    if(!D.altHistory[ex.name]) D.altHistory[ex.name]=[];
+    ex.history.forEach(h=>{
+      const dup=D.altHistory[ex.name].find(x=>x.date===h.date&&x.set1.weight===h.set1.weight&&x.set1.reps===h.set1.reps);
+      if(!dup) D.altHistory[ex.name].push(h);
+    });
+    D.altHistory[ex.name].sort((a,b)=>a.date.localeCompare(b.date));
+  }
+  D.splits[si].exercises.splice(ei,1);
+  saveData();
+  renderExerciseEditRows(si);
+  showToast(`Removed from split — history kept in catalogue`);
 }
-function addExercise(si){
-  D.splits[si].exercises.push({name:'New Exercise',warmupWeight:0,warmupReps:10,workingWeight:0,notes:'',history:[],alternatives:[]});
-  saveData(); renderExerciseEditRows(si);
-}
+// addExercise via free typing removed — catalogue-only via openCataloguePickerModal
 
 // ── CATALOGUE ──────────────────────────────────────────────────────
 const MUSCLE_GROUPS=[
@@ -1886,7 +1904,7 @@ Object.assign(window,{
   openAltsModal, applySwap, revertSwap, closeModal,
   openNotesModal, saveNotes,
   openEditSplitsModal, renameSplit, deleteSplit, addSplit, renderSplitEditRows, moveSplit,
-  openEditExercisesModal, renameExercise, deleteExercise, addExercise, renderExerciseEditRows, moveExercise,
+  openEditExercisesModal, renameExercise, deleteExercise, renderExerciseEditRows, moveExercise,
   openCataloguePickerModal, addFromCatalogue, pickerFilter,
   openAddAltModal, filterAddAlt, addAltFromCatalogue,
   openMultiplierModal, saveMultiplier,
